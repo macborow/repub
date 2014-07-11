@@ -46,15 +46,19 @@ class DocumentData(object):
         
         title = soup.find("title")
         if title:
-            self.title = title.string.strip()
+            try:
+                self.title = title.string.decode("utf-8").strip()
+            except UnicodeEncodeError, ex:
+                logging.warn(ex)
+                self.title = filter(lambda x: x in string.printable, title.string).strip()
         logging.info("TITLE: %s", self.title)
 
         if not self.url:
             url = soup.find("meta", {"property": "og:url"})
             if url and url.get("content"):
-                self.url = url.get("content")
+                self.url = url.get("content").decode("utf-8")
                 try:
-                    self.author= urlparse(url.get("content")).netloc.strip()
+                    self.author= urlparse(self.url).netloc.strip()
                 except Exception:
                     pass
         logging.info("AUTHOR: %s", self.author)
@@ -197,7 +201,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", help="verbose", action="store_true", default=False)
     args = parser.parse_args(sys.argv[1:])
     
-    if len(sys.argv) < 2:
+    if not URL and len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
     
