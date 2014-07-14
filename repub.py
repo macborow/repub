@@ -63,11 +63,17 @@ class DocumentData(object):
                     pass
         logging.info("AUTHOR: %s", self.author)
 
+        # strip all comments
+        for comment in soup.findAll(text=lambda tag: isinstance(tag, bs4.Comment)):
+            comment.extract()
+
+        # strip all scripts
+        for scriptTag in soup.findAll("script"):
+            scriptTag .extract()
+
         # extract what looks like text/headlines
         for paragraph in soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"]):
             if paragraph.getText():
-                if "<script>" in unicode(paragraph):
-                    continue
                 content = paragraph.getText().strip()
                 if content:
                     if re.match("h\\d", paragraph.name):
