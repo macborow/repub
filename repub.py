@@ -36,6 +36,7 @@ class DocumentData(object):
 
         self.paragraphs = []
         self.documentBody = ""
+        self.templateValues = {}
 
 
     def parseDocument(self, sourceDocument):
@@ -82,6 +83,16 @@ class DocumentData(object):
                         self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
 
         self.documentBody = "\n".join(self.paragraphs)
+        
+        self.templateValues = {
+            "title": cgi.escape(self.title),
+            "url": self.url,
+            "author": cgi.escape(self.author),
+            "shortDateString": self.shortDateString,
+            "uuid": self.uuid,
+            "language": self.language,
+            "documentBody": self.documentBody
+        }
 
 
 CONTAINER_XML = (
@@ -176,16 +187,16 @@ def initializePackageStructure(tmpDir):
 
 def generateTocNcx(tmpDir, documentData):
     with open(os.path.join(tmpDir, "OEBPS", "toc.ncx"), "wb") as tf:
-        tf.write(TOC_NCX_TEMPLATE % documentData.__dict__)
+        tf.write(TOC_NCX_TEMPLATE % documentData.templateValues)
 
 
 def generateContentOpf(tmpDir, documentData):
     with open(os.path.join(tmpDir, "OEBPS", "content.opf"), "wb") as tf:
-        tf.write(CONTENT_OPF_TEMPLATE % documentData.__dict__)
+        tf.write(CONTENT_OPF_TEMPLATE % documentData.templateValues)
 
 
 def generateContent(tmpDir, documentData):
-    content = CONTENT_TEMPLATE % documentData.__dict__
+    content = CONTENT_TEMPLATE % documentData.templateValues
     with open(os.path.join(tmpDir, "OEBPS", "text", "content.xhtml"), "wb") as tf:
         tf.write(content.encode("utf-8"))
 
