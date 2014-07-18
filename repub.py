@@ -20,6 +20,7 @@ import re
 import cookielib
 import cgi
 from urlparse import urlparse
+from xml.sax.saxutils import quoteattr
 
 URL=""
 
@@ -86,7 +87,8 @@ class DocumentData(object):
         
         self.templateValues = {
             "title": cgi.escape(self.title),
-            "url": self.url,
+            "url": cgi.escape(self.url),
+            "urlAttribute": quoteattr(self.url),
             "author": cgi.escape(self.author),
             "shortDateString": self.shortDateString,
             "uuid": self.uuid,
@@ -169,7 +171,7 @@ ur"""<?xml version="1.0" encoding="UTF-8" ?>
 
 <body>
 	<h1>%(title)s</h1>
-	<h2><a href="%(url)s">%(author)s</a></h2>
+	<h2><a href=%(urlAttribute)s>%(author)s</a></h2>
 %(documentBody)s
 </body>
 </html>
