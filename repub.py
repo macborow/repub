@@ -74,11 +74,13 @@ class DocumentData(object):
             scriptTag .extract()
 
         # extract what looks like text/headlines
-        for paragraph in soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"]):
+        for paragraph in soup.find_all(["p", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]):
             if paragraph.getText():
                 content = paragraph.getText().strip()
                 if content:
                     if re.match("h\\d", paragraph.name):
+                        self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                    if paragraph.name == "pre":
                         self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
                     else:
                         self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
