@@ -60,6 +60,7 @@ class DocumentData(object):
             except UnicodeEncodeError, ex:
                 logging.warn(ex)
                 self.title = filter(lambda x: x in string.printable, title.string).strip()
+        self.title = re.sub("\n", " ", self.title)
         logging.info("TITLE: %s", self.title)
 
         if not self.url:
