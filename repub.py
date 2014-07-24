@@ -40,7 +40,14 @@ class DocumentData(object):
         self.templateValues = {}
 
 
-    def parseDocument(self, sourceDocument):
+    def getAllowedParagraphTagNames(self, includeDIV=False):
+        tags = ["p", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]
+        if includeDIV:
+            tags.append("div")
+        return tags
+
+
+    def parseDocument(self, sourceDocument, includeDIV=False):
         """
         sourceDocument (str) - input file contents
         """
@@ -73,17 +80,21 @@ class DocumentData(object):
         for scriptTag in soup.findAll("script"):
             scriptTag .extract()
 
+        # text passages containing <br> tags into multiple paragraphs
+        brSplitRegexp = re.compile(r"\<\s*br\s*/{0,1}\>", re.I)
+
         # extract what looks like text/headlines
-        for paragraph in soup.find_all(["p", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]):
+        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV)):
             if paragraph.getText():
-                content = paragraph.getText().strip()
-                if content:
-                    if re.match("h\\d", paragraph.name):
-                        self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
-                    if paragraph.name == "pre":
-                        self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
-                    else:
-                        self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
+                for content in brSplitRegexp.split(unicode(paragraph)):
+                    content = bs4.BeautifulSoup(content).getText().strip()
+                    if content:
+                        if re.match("h\\d", paragraph.name):
+                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                        if paragraph.name == "pre":
+                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                        else:
+                            self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
 
         self.documentBody = "\n".join(self.paragraphs)
         
@@ -218,6 +229,9 @@ if __name__ == "__main__":
     parser.add_argument("-f", help="input file", action="store")
     parser.add_argument("-u", help="URL to input file", action="store")
     parser.add_argument("-o", help="output directory", action="store")
+    parser.add_argument("--div",
+                        help="include <div> tags (to use when a page uses <div> instead of <p> for paragraphs)",
+                        action="store_true")
     parser.add_argument("-d", help="debug mode", action="store_true", default=False)
     parser.add_argument("-v", help="verbose", action="store_true", default=False)
     args = parser.parse_args(sys.argv[1:])
@@ -280,7 +294,7 @@ if __name__ == "__main__":
     logging.debug("Using temp directory: %s", tmpDir)
 
     try:
-        documentData.parseDocument(sourceDocument)
+        documentData.parseDocument(sourceDocument, args.div)
         initializePackageStructure(tmpDir)
         generateTocNcx(tmpDir, documentData)
         generateContentOpf(tmpDir, documentData)
