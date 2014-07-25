@@ -85,9 +85,16 @@ class DocumentData(object):
         brSplitRegexp = re.compile(r"\<\s*br\s*/{0,1}\>", re.I)
 
         # some blogs define section id="content", let's try to be smart about it
-        contentSection = soup.find("section", id="content")
-        if contentSection:
-            soup = contentSection
+        contentSelectors = [
+            {"name": "article"},
+            {"name": "section", id: "content"},
+        ]
+        for selector in contentSelectors:
+            contentSection = soup.find(**selector)
+            if contentSection:
+                logging.info("Stripping everything except for the following section: %s", repr(selector))
+                soup = contentSection
+                break
 
         # extract what looks like text/headlines
         for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV)):
