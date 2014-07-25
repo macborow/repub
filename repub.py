@@ -41,7 +41,7 @@ class DocumentData(object):
 
 
     def getAllowedParagraphTagNames(self, includeDIV=False):
-        tags = ["p", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]
+        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]
         if includeDIV:
             tags.append("div")
         return tags
@@ -84,6 +84,11 @@ class DocumentData(object):
         # text passages containing <br> tags into multiple paragraphs
         brSplitRegexp = re.compile(r"\<\s*br\s*/{0,1}\>", re.I)
 
+        # some blogs define section id="content", let's try to be smart about it
+        contentSection = soup.find("section", id="content")
+        if contentSection:
+            soup = contentSection
+
         # extract what looks like text/headlines
         for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV)):
             if paragraph.getText():
@@ -93,6 +98,8 @@ class DocumentData(object):
                         if re.match("h\\d", paragraph.name):
                             self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
                         if paragraph.name == "pre":
+                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                        elif paragraph.name == "li":
                             self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
                         else:
                             self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
