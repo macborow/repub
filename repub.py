@@ -87,7 +87,9 @@ class DocumentData(object):
         # some blogs define section id="content", let's try to be smart about it
         contentSelectors = [
             {"name": "article"},
-            {"name": "section", id: "content"},
+            {"name": "section", "id": "content"},
+            {"name": "div", "id": "maincontent"},
+            {"name": "div", "id": "main-content"},
         ]
         for selector in contentSelectors:
             contentSection = soup.find(**selector)
