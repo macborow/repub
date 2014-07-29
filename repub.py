@@ -87,16 +87,26 @@ class DocumentData(object):
         # some blogs define section id="content", let's try to be smart about it
         contentSelectors = [
             {"name": "article"},
+            {"name": "div", "id": "content"},
+            {"name": "div", "class": "content"},
             {"name": "section", "id": "content"},
             {"name": "div", "id": "maincontent"},
             {"name": "div", "id": "main-content"},
         ]
+        contentCandidates = []
         for selector in contentSelectors:
             contentSection = soup.find(**selector)
             if contentSection:
-                logging.info("Stripping everything except for the following section: %s", repr(selector))
-                soup = contentSection
-                break
+                contentCandidates.append(contentSection)
+        
+        # select the largest section from the ones filtered out above
+        if contentCandidates:
+            soup = ""
+            for contentCandidate in contentCandidates:
+                if len(str(contentCandidate)) > len(str(soup)):
+                    soup = contentCandidate
+            logging.info("Stripping everything except for the following section: %s %s", soup.name, repr(soup.attrs))
+
 
         # extract what looks like text/headlines
         for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV)):
