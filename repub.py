@@ -89,9 +89,11 @@ class DocumentData(object):
             {"name": "article"},
             {"name": "div", "id": "content"},
             {"name": "div", "class": "content"},
+            {"name": "div", "class": "contentbox"},
             {"name": "section", "id": "content"},
             {"name": "div", "id": "maincontent"},
             {"name": "div", "id": "main-content"},
+            {"name": "div", "class": "single-archive"},
         ]
         contentCandidates = []
         for selector in contentSelectors:
@@ -326,7 +328,7 @@ if __name__ == "__main__":
         generateTocNcx(tmpDir, documentData)
         generateContentOpf(tmpDir, documentData)
         generateContent(tmpDir, documentData)
-        outputFilename = "%s_%s.epub" % (documentData.title, documentData.shortDateString)
+        outputFilename = "%s_%s.epub" % (documentData.title.replace('"', ""), documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
         saveAsEPUB(tmpDir, args.o, outputFilename)
     finally:
