@@ -24,6 +24,8 @@ from xml.sax.saxutils import quoteattr
 
 URL=""
 
+INCLUDE_IMAGES = False  # global override (for testing)
+
 
 class DocumentData(object):
     def __init__(self):
@@ -38,16 +40,19 @@ class DocumentData(object):
         self.paragraphs = []
         self.documentBody = ""
         self.templateValues = {}
+        self.images = []
 
 
-    def getAllowedParagraphTagNames(self, includeDIV=False):
+    def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=INCLUDE_IMAGES):
         tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]
         if includeDIV:
             tags.append("div")
+        if includeIMG:
+            tags.append("img")
         return tags
 
 
-    def parseDocument(self, sourceDocument, includeDIV=False):
+    def parseDocument(self, sourceDocument, includeDIV=False, includeIMG=INCLUDE_IMAGES):
         """
         sourceDocument (str) - input file contents
         """
@@ -94,6 +99,7 @@ class DocumentData(object):
             {"name": "div", "id": "maincontent"},
             {"name": "div", "id": "main-content"},
             {"name": "div", "class": "single-archive"},
+            {"name": "div", "class": "blogcontent"},
         ]
         contentCandidates = []
         for selector in contentSelectors:
@@ -109,21 +115,32 @@ class DocumentData(object):
                     soup = contentCandidate
             logging.info("Stripping everything except for the following section: %s %s", soup.name, repr(soup.attrs))
 
+        def processImage(tag, imgCounter=[0]):
+            if "src" in imgTag.attrs:
+                imgUrl = imgTag["src"]
+                localName = "%s%s" % (str(imgCounter[0]), os.path.splitext(imgUrl.split("?")[0])[1])
+                self.images.append([localName, imgTag["src"]])
+                self.paragraphs.append("<img src=%s/>" % quoteattr("../img/%s" % localName))
+                imgCounter[0] += 1
 
         # extract what looks like text/headlines
-        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV)):
+        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV, includeIMG)):
             if paragraph.getText():
                 for content in brSplitRegexp.split(unicode(paragraph)):
                     content = bs4.BeautifulSoup(content).getText().strip()
                     if content:
                         if re.match("h\\d", paragraph.name):
                             self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
-                        if paragraph.name == "pre":
+                        if paragraph.name in ("pre", "li"):
                             self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
-                        elif paragraph.name == "li":
-                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                        elif paragraph.name == "img":
+                            processImage(paragraph)
                         else:
                             self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
+            if includeIMG:
+                # handle images within paragraph
+                for imgTag in paragraph.find_all("img"):
+                    processImage(imgTag)
 
         self.documentBody = "\n".join(self.paragraphs)
         
@@ -223,6 +240,7 @@ def initializePackageStructure(tmpDir):
     os.mkdir(os.path.join(tmpDir, "META-INF"))
     os.mkdir(os.path.join(tmpDir, "OEBPS"))
     os.mkdir(os.path.join(tmpDir, "OEBPS", "text"))
+    os.mkdir(os.path.join(tmpDir, "OEBPS", "img"))
     with open(os.path.join(tmpDir, "mimetype"), "wb") as fileOut:
         fileOut.write("application/epub+zip")
     with open(os.path.join(tmpDir, "META-INF", "container.xml"), "wb") as fileOut:
@@ -244,6 +262,15 @@ def generateContent(tmpDir, documentData):
     with open(os.path.join(tmpDir, "OEBPS", "text", "content.xhtml"), "wb") as tf:
         tf.write(content.encode("utf-8"))
 
+def downloadImages(tmpDir, documentData):
+    for (localName, url) in documentData.images:
+        try:
+            imgRequest = urllib2.Request(url)
+            with open(os.path.join(tmpDir, "OEBPS", "img", localName), "wb") as imgFile:
+                imgFile.write(urllib2.urlopen(imgRequest).read())
+                logging.info("Downloaded image: %s", url)
+        except ValueError:
+            logging.warn("Skipping image: %s", url)
 
 def saveAsEPUB(tmpDir, outputDir, outputFilename):
     out = zipfile.ZipFile(os.path.join(outputDir, outputFilename), "w")
@@ -261,6 +288,7 @@ if __name__ == "__main__":
     parser.add_argument("--div",
                         help="include <div> tags (to use when a page uses <div> instead of <p> for paragraphs)",
                         action="store_true")
+    parser.add_argument("--img", help="include images", action="store_true", default=False)
     parser.add_argument("-d", help="debug mode", action="store_true", default=False)
     parser.add_argument("-v", help="verbose", action="store_true", default=False)
     args = parser.parse_args(sys.argv[1:])
@@ -323,11 +351,12 @@ if __name__ == "__main__":
     logging.debug("Using temp directory: %s", tmpDir)
 
     try:
-        documentData.parseDocument(sourceDocument, args.div)
+        documentData.parseDocument(sourceDocument, args.div, INCLUDE_IMAGES or args.img)
         initializePackageStructure(tmpDir)
         generateTocNcx(tmpDir, documentData)
         generateContentOpf(tmpDir, documentData)
         generateContent(tmpDir, documentData)
+        downloadImages(tmpDir, documentData)
         outputFilename = "%s_%s.epub" % (documentData.title.replace('"', ""), documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
         saveAsEPUB(tmpDir, args.o, outputFilename)
