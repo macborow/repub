@@ -92,6 +92,7 @@ class DocumentData(object):
         # some blogs define section id="content", let's try to be smart about it
         contentSelectors = [
             {"name": "article"},
+            {"name": "section", "class": "main_cont"},
             {"name": "div", "id": "content"},
             {"name": "div", "class": "content"},
             {"name": "div", "class": "contentbox"},
@@ -100,6 +101,7 @@ class DocumentData(object):
             {"name": "div", "id": "main-content"},
             {"name": "div", "class": "single-archive"},
             {"name": "div", "class": "blogcontent"},
+            {"name": "div", "class": "post"},
         ]
         contentCandidates = []
         for selector in contentSelectors:
@@ -115,11 +117,16 @@ class DocumentData(object):
                     soup = contentCandidate
             logging.info("Stripping everything except for the following section: %s %s", soup.name, repr(soup.attrs))
 
+        imageCache = {}
         def processImage(tag, imgCounter=[0]):
             if "src" in imgTag.attrs:
                 imgUrl = imgTag["src"]
-                localName = "%s%s" % (str(imgCounter[0]), os.path.splitext(imgUrl.split("?")[0])[1])
-                self.images.append([localName, imgTag["src"]])
+                if imgUrl in imageCache:
+                    localName = imageCache[imgUrl]
+                else:
+                    localName = "%s%s" % (str(imgCounter[0]), os.path.splitext(imgUrl.split("?")[0])[1])
+                    self.images.append([localName, imgTag["src"]])
+                    imageCache[imgUrl] = localName
                 self.paragraphs.append("<img src=%s/>" % quoteattr("../img/%s" % localName))
                 imgCounter[0] += 1
 
