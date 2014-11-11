@@ -26,6 +26,46 @@ URL=""
 
 INCLUDE_IMAGES = False  # global override (for testing)
 
+FONT_SCHEMES = {
+    "global_TNR" : 
+ur"""
+@font-face {
+font-family: "Times New Roman";
+font-weight: normal;
+font-style: normal;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/times.ttf);
+}
+
+@font-face {
+font-family: "Times New Roman";
+font-weight: bold;
+font-style: normal;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/timesbd.ttf);
+}
+
+@font-face {
+font-family: "Times New Roman";
+font-weight: normal;
+font-style: italic;
+src:url(res:///ebook/fonts/../../mnt/sdcard/fonts/timesi.ttf);
+}
+
+@font-face {
+font-family: "Times New Roman";
+font-weight: bold;
+font-style: italic;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/timesbi.ttf);
+}
+
+body, div, p {
+font-family: "Times New Roman";
+}
+"""
+}
+
+#~ EXTRA_CSS = [
+    #~ FONT_SCHEMES["global_TNR"]
+#~ ]
 
 class DocumentData(object):
     def __init__(self):
@@ -44,7 +84,7 @@ class DocumentData(object):
 
 
     def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=INCLUDE_IMAGES):
-        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]
+        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font"
         if includeDIV:
             tags.append("div")
         if includeIMG:
@@ -233,6 +273,7 @@ ur"""<?xml version="1.0" encoding="UTF-8" ?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
   <title>%(title)s</title>
+  <link rel="stylesheet" type="text/css" href="content.css"/>
 </head>
 
 <body>
@@ -268,6 +309,13 @@ def generateContent(tmpDir, documentData):
     content = CONTENT_TEMPLATE % documentData.templateValues
     with open(os.path.join(tmpDir, "OEBPS", "text", "content.xhtml"), "wb") as tf:
         tf.write(content.encode("utf-8"))
+
+
+def generateCSS(tmpDir, documentData):
+    content = "\n".join(EXTRA_CSS)
+    with open(os.path.join(tmpDir, "OEBPS", "text", "content.css"), "wb") as tf:
+        tf.write(content.encode("utf-8"))
+
 
 def downloadImages(tmpDir, documentData):
     for (localName, url) in documentData.images:
@@ -363,6 +411,7 @@ if __name__ == "__main__":
         generateTocNcx(tmpDir, documentData)
         generateContentOpf(tmpDir, documentData)
         generateContent(tmpDir, documentData)
+        generateCSS(tmpDir, documentData)
         downloadImages(tmpDir, documentData)
         outputFilename = "%s_%s.epub" % (documentData.title.replace('"', ""), documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
