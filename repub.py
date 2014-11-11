@@ -63,9 +63,9 @@ font-family: "Times New Roman";
 """
 }
 
-#~ EXTRA_CSS = [
+EXTRA_CSS = [
     #~ FONT_SCHEMES["global_TNR"]
-#~ ]
+]
 
 class DocumentData(object):
     def __init__(self):
