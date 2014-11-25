@@ -24,6 +24,7 @@ from xml.sax.saxutils import quoteattr
 
 URL=""
 
+INCLUDE_DIV = False  # global override (for testing)
 INCLUDE_IMAGES = False  # global override (for testing)
 
 FONT_SCHEMES = {
@@ -68,13 +69,13 @@ EXTRA_CSS = [
 ]
 
 class DocumentData(object):
-    def __init__(self):
+    def __init__(self, url=None):
         self.conversionTimestamp = datetime.datetime.now()
         self.shortDateString = self.conversionTimestamp.strftime("%Y-%m-%d")
         self.uuid = str(uuid.uuid1())
         self.title = "Untitled"
         self.author = "Unknown"
-        self.url = ""
+        self.url = url or ""
         self.language = "en"
 
         self.paragraphs = []
@@ -84,10 +85,10 @@ class DocumentData(object):
 
 
     def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=INCLUDE_IMAGES):
-        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font"
-        if includeDIV:
+        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
+        if INCLUDE_DIV or includeDIV:
             tags.append("div")
-        if includeIMG:
+        if INCLUDE_IMAGES or includeIMG:
             tags.append("img")
         return tags
 
@@ -158,14 +159,22 @@ class DocumentData(object):
             logging.info("Stripping everything except for the following section: %s %s", soup.name, repr(soup.attrs))
 
         imageCache = {}
-        def processImage(tag, imgCounter=[0]):
+        def processImage(imgTag, imgCounter=[0]):
             if "src" in imgTag.attrs:
                 imgUrl = imgTag["src"]
                 if imgUrl in imageCache:
                     localName = imageCache[imgUrl]
                 else:
                     localName = "%s%s" % (str(imgCounter[0]), os.path.splitext(imgUrl.split("?")[0])[1])
-                    self.images.append([localName, imgTag["src"]])
+                    imageUrl = imgTag["src"]
+                    if imageUrl.startswith("/"):
+                        try:
+                            parsedUrl = urlparse(self.url)
+                            hostUrl = "%s://%s" % (parsedUrl.scheme, parsedUrl.netloc)
+                        except Exception:
+                            pass
+                        imageUrl = "%s%s" % (hostUrl, imageUrl)
+                    self.images.append([localName, imageUrl])
                     imageCache[imgUrl] = localName
                 self.paragraphs.append("<img src=%s/>" % quoteattr("../img/%s" % localName))
                 imgCounter[0] += 1
@@ -184,6 +193,8 @@ class DocumentData(object):
                             processImage(paragraph)
                         else:
                             self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
+            elif includeIMG and paragraph.name == "img":
+                processImage(paragraph)
             if includeIMG:
                 # handle images within paragraph
                 for imgTag in paragraph.find_all("img"):
@@ -320,10 +331,10 @@ def generateCSS(tmpDir, documentData):
 def downloadImages(tmpDir, documentData):
     for (localName, url) in documentData.images:
         try:
+            logging.info("Downloading image: %s", url)
             imgRequest = urllib2.Request(url)
             with open(os.path.join(tmpDir, "OEBPS", "img", localName), "wb") as imgFile:
                 imgFile.write(urllib2.urlopen(imgRequest).read())
-                logging.info("Downloaded image: %s", url)
         except ValueError:
             logging.warn("Skipping image: %s", url)
 
@@ -376,7 +387,7 @@ if __name__ == "__main__":
         logging.error("given output path is incorrect")
         sys.exit(1)
     
-    documentData = DocumentData()
+    documentData = DocumentData(args.u)
     
     try:
         if args.f:
