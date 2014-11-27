@@ -100,12 +100,14 @@ class DocumentData(object):
         soup = bs4.BeautifulSoup(sourceDocument)
         
         title = soup.find("title")
-        if title:
+        if title and title.string:
             try:
                 self.title = title.string.decode("utf-8").strip()
             except UnicodeEncodeError, ex:
                 logging.warn(ex)
                 self.title = filter(lambda x: x in string.printable, title.string).strip()
+        else:
+            self.title = self.url or "Untitled"
         self.title = re.sub("\n", " ", self.title)
         logging.info("TITLE: %s", self.title)
 
