@@ -26,6 +26,7 @@ URL=""
 
 INCLUDE_DIV = False  # global override (for testing)
 INCLUDE_IMAGES = False  # global override (for testing)
+ENABLE_STRIPPING = True  # strip only selected sections (e.g. article, etc.) - try to narrow down to only interesting content
 
 FONT_SCHEMES = {
     "global_TNR" : 
@@ -147,10 +148,11 @@ class DocumentData(object):
             {"name": "div", "class": "post"},
         ]
         contentCandidates = []
-        for selector in contentSelectors:
-            contentSection = soup.find(**selector)
-            if contentSection:
-                contentCandidates.append(contentSection)
+        if ENABLE_STRIPPING:
+            for selector in contentSelectors:
+                contentSections = soup.find_all(**selector)
+                if contentSections:
+                    contentCandidates.extend(contentSections)
         
         # select the largest section from the ones filtered out above
         if contentCandidates:
