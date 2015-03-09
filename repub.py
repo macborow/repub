@@ -143,9 +143,11 @@ class DocumentData(object):
             {"name": "section", "id": "content"},
             {"name": "div", "id": "maincontent"},
             {"name": "div", "id": "main-content"},
+            {"name": "div", "class": "main-content"},
             {"name": "div", "class": "single-archive"},
             {"name": "div", "class": "blogcontent"},
             {"name": "div", "class": "post"},
+            #~ {"name": "div", "class": "col-left-story"},
         ]
         contentCandidates = []
         if ENABLE_STRIPPING:
@@ -161,6 +163,22 @@ class DocumentData(object):
                 if len(str(contentCandidate)) > len(str(soup)):
                     soup = contentCandidate
             logging.info("Stripping everything except for the following section: %s %s", soup.name, repr(soup.attrs))
+
+        excludedContentSelectors = [
+            {"name": "div", "class": "more-from"},
+            {"name": "div", "class": "more-in-this-section"},
+            {"name": "div", "class": "breaking-stories"},
+            {"name": "ul", "data-vr-zone": "most-read-stories"},
+            {"name": "div", "id": "topstories"},
+            {"name": "div", "id": "mostshared"},
+        ]
+        if ENABLE_STRIPPING:
+            for selector in excludedContentSelectors:
+                contentSections = soup.find_all(**selector)
+                if contentSections:
+                    print "Removing section:", selector
+                    for section in contentSections:
+                        section.extract()
 
         imageCache = {}
         def processImage(imgTag, imgCounter=[0]):
@@ -337,8 +355,12 @@ def downloadImages(tmpDir, documentData):
         try:
             logging.info("Downloading image: %s", url)
             imgRequest = urllib2.Request(url)
-            with open(os.path.join(tmpDir, "OEBPS", "img", localName), "wb") as imgFile:
-                imgFile.write(urllib2.urlopen(imgRequest).read())
+            try:
+                imgData = urllib2.urlopen(imgRequest).read()
+                with open(os.path.join(tmpDir, "OEBPS", "img", localName), "wb") as imgFile:
+                    imgFile.write(imgData)
+            except urllib2.HTTPError, ex:
+                logging.error("Failed to download image: %s", ex.message)
         except ValueError:
             logging.warn("Skipping image: %s", url)
 
@@ -428,7 +450,7 @@ if __name__ == "__main__":
         generateContent(tmpDir, documentData)
         generateCSS(tmpDir, documentData)
         downloadImages(tmpDir, documentData)
-        outputFilename = "%s_%s.epub" % (documentData.title.replace('"', ""), documentData.shortDateString)
+        outputFilename = "%s_%s.epub" % (documentData.title.replace('"', "").replace("\t", " "), documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
         saveAsEPUB(tmpDir, args.o, outputFilename)
     finally:
