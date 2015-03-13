@@ -26,6 +26,7 @@ URL=""
 
 INCLUDE_DIV = False  # global override (for testing)
 INCLUDE_IMAGES = False  # global override (for testing)
+INCLUDE_TABLES = False
 ENABLE_STRIPPING = True  # strip only selected sections (e.g. article, etc.) - try to narrow down to only interesting content
 
 FONT_SCHEMES = {
@@ -91,6 +92,8 @@ class DocumentData(object):
             tags.append("div")
         if INCLUDE_IMAGES or includeIMG:
             tags.append("img")
+        if INCLUDE_TABLES:
+            tags.append("table")
         return tags
 
 
@@ -171,6 +174,10 @@ class DocumentData(object):
             {"name": "ul", "data-vr-zone": "most-read-stories"},
             {"name": "div", "id": "topstories"},
             {"name": "div", "id": "mostshared"},
+            {"name": "div", "class": "blog-archive-list"},
+            {"name": "div", "id": "stb-header"},
+            {"name": "ul", "class": "navigation-list"},
+            {"name": "ul", "class": "tag-list"},
         ]
         if ENABLE_STRIPPING:
             for selector in excludedContentSelectors:
@@ -213,6 +220,8 @@ class DocumentData(object):
                             self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
                         elif paragraph.name == "img":
                             processImage(paragraph)
+                        elif paragraph.name == "table":
+                            self.paragraphs.append(unicode(paragraph))
                         else:
                             self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
             elif includeIMG and paragraph.name == "img":
@@ -222,7 +231,7 @@ class DocumentData(object):
                 for imgTag in paragraph.find_all("img"):
                     processImage(imgTag)
 
-        self.documentBody = "\n".join(self.paragraphs)
+        self.documentBody = u"\n".join(self.paragraphs)
         
         self.templateValues = {
             "title": cgi.escape(self.title),
