@@ -178,6 +178,18 @@ class DocumentData(object):
             {"name": "div", "id": "stb-header"},
             {"name": "ul", "class": "navigation-list"},
             {"name": "ul", "class": "tag-list"},
+            {"name": "ul", "class": "mainNav"},
+            {"name": "div", "class": "secLinks"},
+            {"name": "div", "id": "tmg-related-links"},
+            {"name": "div", "class": "related_links"},
+            {"name": "div", "class": "section-puffs"},
+            {"name": "div", "class": "artCommercial"},
+            {"name": "div", "class": "mostPopular"},
+            {"name": "ul", "class": "menu1"},
+            {"name": "ul", "class": "menu2"},
+            {"name": "div", "bucket-id": "top_stories_05"},
+            {"name": "div", "class": "printHide"},
+            {"name": "aside", "class": "related-coverage-marginalia"},
         ]
         if ENABLE_STRIPPING:
             for selector in excludedContentSelectors:
@@ -459,7 +471,9 @@ if __name__ == "__main__":
         generateContent(tmpDir, documentData)
         generateCSS(tmpDir, documentData)
         downloadImages(tmpDir, documentData)
-        outputFilename = "%s_%s.epub" % (documentData.title.replace('"', "").replace("\t", " "), documentData.shortDateString)
+        allowedChars = ['_', '-', '!', ' ']
+        sanitizedTitle = filter(lambda ch: ch.isalpha() or ch.isdigit() or ch in allowedChars, documentData.title)
+        outputFilename = "%s_%s.epub" % (sanitizedTitle, documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
         saveAsEPUB(tmpDir, args.o, outputFilename)
     finally:
