@@ -421,6 +421,8 @@ def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False
         includeIMG (bool)
         includeTables (bool)
         extraCSS (list[str]) - additional CSS to include in .epub, e.g. custom fonts
+    RETURNS:
+        str - path to output file
     """
     documentData = DocumentData(url)
 
@@ -448,6 +450,7 @@ def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False
         outputFilename = "%s_%s.epub" % (sanitizedTitle, documentData.shortDateString)
         outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
         saveAsEPUB(tmpDir, outDir, outputFilename)
+        return os.path.join(outDir, outputFilename)
     finally:
         # keep temporary files in debug mode
         if not debug and os.path.exists(tmpDir):
