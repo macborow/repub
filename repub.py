@@ -410,13 +410,22 @@ def downloadWebPageSource(url):
         raise
 
 
-def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False, includeTables=False, debug=False):
+def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False, includeTables=False, extraCSS=None, debug=False):
     """
     Generate .epub file.
     ARGS:
+        url (str)
         sourceDocument (str) - HTML of the page being saved to .epub
+        outDir (str) - output directory
+        includeDIV (bool)
+        includeIMG (bool)
+        includeTables (bool)
+        extraCSS (list[str]) - additional CSS to include in .epub, e.g. custom fonts
     """
     documentData = DocumentData(url)
+
+    if extraCSS is None:
+        extraCSS = []
 
     tmpDir = ""
     if debug:
@@ -508,6 +517,7 @@ if __name__ == "__main__":
                  includeDIV=INCLUDE_DIV or args.div,
                  includeIMG=INCLUDE_IMAGES or args.img,
                  includeTables=INCLUDE_TABLES or args.t,
+                 extraCSS=EXTRA_CSS,
                  debug=args.d)
 
 
