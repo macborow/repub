@@ -86,18 +86,18 @@ class DocumentData(object):
         self.images = []
 
 
-    def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=INCLUDE_IMAGES):
+    def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=False, includeTables=False):
         tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
-        if INCLUDE_DIV or includeDIV:
+        if includeDIV:
             tags.append("div")
-        if INCLUDE_IMAGES or includeIMG:
+        if includeIMG:
             tags.append("img")
-        if INCLUDE_TABLES:
+        if includeTables:
             tags.append("table")
         return tags
 
 
-    def parseDocument(self, sourceDocument, includeDIV=False, includeIMG=INCLUDE_IMAGES):
+    def parseDocument(self, sourceDocument, includeDIV=False, includeIMG=False, includeTables=False):
         """
         sourceDocument (str) - input file contents
         """
@@ -221,7 +221,7 @@ class DocumentData(object):
                 imgCounter[0] += 1
 
         # extract what looks like text/headlines
-        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV, includeIMG)):
+        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV, includeIMG, includeTables)):
             if paragraph.getText():
                 for content in brSplitRegexp.split(unicode(paragraph)):
                     content = bs4.BeautifulSoup(content).getText().strip()
@@ -393,6 +393,59 @@ def saveAsEPUB(tmpDir, outputDir, outputFilename):
     out.close()
 
 
+
+def downloadWebPageSource(url):
+    """
+    Download HTML given an URL to web page.
+    """
+    try:
+        cj = cookielib.CookieJar()
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        urllib2.install_opener(opener)
+        response = urllib2.urlopen(url)
+        return response.read()
+    except urllib2.HTTPError as e:
+        logging.error("Failed to open source URL (%d): %s", e.code, 
+                          BaseHTTPServer.BaseHTTPRequestHandler.responses.get(e.code, "Unknown error"))
+        raise
+
+
+def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False, includeTables=False, debug=False):
+    """
+    Generate .epub file.
+    ARGS:
+        sourceDocument (str) - HTML of the page being saved to .epub
+    """
+    documentData = DocumentData(url)
+
+    tmpDir = ""
+    if debug:
+        tmpDir = os.path.join(outDir, documentData.conversionTimestamp.strftime("%Y.%m.%d_%H.%M.%S"))
+        os.mkdir(tmpDir)
+    else:
+        tmpDir = tempfile.mkdtemp()
+    logging.debug("Using temp directory: %s", tmpDir)
+
+    try:
+        documentData.parseDocument(sourceDocument, includeDIV=includeDIV, includeIMG=includeIMG, includeTables=includeTables)
+        initializePackageStructure(tmpDir)
+        generateTocNcx(tmpDir, documentData)
+        generateContentOpf(tmpDir, documentData)
+        generateContent(tmpDir, documentData)
+        generateCSS(tmpDir, documentData)
+        downloadImages(tmpDir, documentData)
+        allowedChars = ['_', '-', '!', ' ']
+        sanitizedTitle = filter(lambda ch: ch.isalpha() or ch.isdigit() or ch in allowedChars, documentData.title)
+        outputFilename = "%s_%s.epub" % (sanitizedTitle, documentData.shortDateString)
+        outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
+        saveAsEPUB(tmpDir, outDir, outputFilename)
+    finally:
+        # keep temporary files in debug mode
+        if not debug and os.path.exists(tmpDir):
+            logging.debug("Removing temp directory: %s", tmpDir)
+            shutil.rmtree(tmpDir, True)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-f", help="input file", action="store")
@@ -402,6 +455,7 @@ if __name__ == "__main__":
                         help="include <div> tags (to use when a page uses <div> instead of <p> for paragraphs)",
                         action="store_true")
     parser.add_argument("--img", help="include images", action="store_true", default=False)
+    parser.add_argument("-t", help="include tables (use with caution)", action="store_true", default=False)
     parser.add_argument("-d", help="debug mode", action="store_true", default=False)
     parser.add_argument("-v", help="verbose", action="store_true", default=False)
     args = parser.parse_args(sys.argv[1:])
@@ -434,19 +488,12 @@ if __name__ == "__main__":
         logging.error("given output path is incorrect")
         sys.exit(1)
     
-    documentData = DocumentData(args.u)
-    
     try:
         if args.f:
             with open(args.f, "rb") as inputFile:
                 sourceDocument = inputFile.read()
         else:
-            if True:
-                cj = cookielib.CookieJar()
-                opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-                urllib2.install_opener(opener)
-                response = urllib2.urlopen(args.u)
-                sourceDocument = response.read()
+            sourceDocument = downloadWebPageSource(args.u)
     except urllib2.HTTPError as e:
         logging.error("Failed to open source URL (%d): %s", e.code, 
                           BaseHTTPServer.BaseHTTPRequestHandler.responses.get(e.code, "Unknown error"))
@@ -455,32 +502,13 @@ if __name__ == "__main__":
         logging.error("Error opening source document: %s", ex.message)
         sys.exit(1)
         
-    tmpDir = ""
-    if args.d:
-        tmpDir = os.path.join(args.o, documentData.conversionTimestamp.strftime("%Y.%m.%d_%H.%M.%S"))
-        os.mkdir(tmpDir)
-    else:
-        tmpDir = tempfile.mkdtemp()
-    logging.debug("Using temp directory: %s", tmpDir)
-
-    try:
-        documentData.parseDocument(sourceDocument, args.div, INCLUDE_IMAGES or args.img)
-        initializePackageStructure(tmpDir)
-        generateTocNcx(tmpDir, documentData)
-        generateContentOpf(tmpDir, documentData)
-        generateContent(tmpDir, documentData)
-        generateCSS(tmpDir, documentData)
-        downloadImages(tmpDir, documentData)
-        allowedChars = ['_', '-', '!', ' ']
-        sanitizedTitle = filter(lambda ch: ch.isalpha() or ch.isdigit() or ch in allowedChars, documentData.title)
-        outputFilename = "%s_%s.epub" % (sanitizedTitle, documentData.shortDateString)
-        outputFilename = string.translate(outputFilename.encode("utf-8"), None, "?*:\\/|")
-        saveAsEPUB(tmpDir, args.o, outputFilename)
-    finally:
-        # keep temporary files in debug mode
-        if not args.d and os.path.exists(tmpDir):
-            logging.debug("Removing temp directory: %s", tmpDir)
-            shutil.rmtree(tmpDir, True)
+    generateEPUB(args.u,  # url
+                 sourceDocument,
+                 args.o,  # outDir
+                 includeDIV=INCLUDE_DIV or args.div,
+                 includeIMG=INCLUDE_IMAGES or args.img,
+                 includeTables=INCLUDE_TABLES or args.t,
+                 debug=args.d)
 
 
 # The MIT License (MIT)
