@@ -140,6 +140,7 @@ class DocumentData(object):
         contentSelectors = [
             {"name": "article"},
             {"name": "section", "class": "main_cont"},
+            {"name": "div", "id": "sn-content"},
             {"name": "div", "id": "content"},
             {"name": "div", "class": "content"},
             {"name": "div", "class": "contentbox"},
@@ -150,6 +151,7 @@ class DocumentData(object):
             {"name": "div", "class": "single-archive"},
             {"name": "div", "class": "blogcontent"},
             {"name": "div", "class": "post"},
+            {"name": "div", "class": "hentry"},
             #~ {"name": "div", "class": "col-left-story"},
         ]
         contentCandidates = []
@@ -185,11 +187,14 @@ class DocumentData(object):
             {"name": "div", "class": "section-puffs"},
             {"name": "div", "class": "artCommercial"},
             {"name": "div", "class": "mostPopular"},
+            {"name": "div", "class": "PageList"},
+            {"name": "div", "class": "BlogArchive"},
             {"name": "ul", "class": "menu1"},
             {"name": "ul", "class": "menu2"},
             {"name": "div", "bucket-id": "top_stories_05"},
             {"name": "div", "class": "printHide"},
             {"name": "aside", "class": "related-coverage-marginalia"},
+            {"name": "aside", "class": "collection-theme-latest-headlines"},
         ]
         if ENABLE_STRIPPING:
             for selector in excludedContentSelectors:
@@ -226,16 +231,19 @@ class DocumentData(object):
                 for content in brSplitRegexp.split(unicode(paragraph)):
                     content = bs4.BeautifulSoup(content).getText().strip()
                     if content:
+                        newContent = None
                         if re.match("h\\d", paragraph.name):
-                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                            newContent = u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name)
                         if paragraph.name in ("pre", "li"):
-                            self.paragraphs.append(u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name))
+                            newContent = u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name)
                         elif paragraph.name == "img":
                             processImage(paragraph)
                         elif paragraph.name == "table":
-                            self.paragraphs.append(unicode(paragraph))
+                            newContent = unicode(paragraph)
                         else:
-                            self.paragraphs.append(u"<p>%s</p>" % cgi.escape(content))
+                            newContent = u"<p>%s</p>" % cgi.escape(content)
+                        if newContent and (not self.paragraphs or newContent != self.paragraphs[-1]):  # ignore duplicates
+                            self.paragraphs.append(newContent)
             elif includeIMG and paragraph.name == "img":
                 processImage(paragraph)
             if includeIMG:
