@@ -92,6 +92,7 @@ class DocumentData(object):
             tags.append("div")
         if includeIMG:
             tags.append("img")
+            tags.append("figure")
         if includeTables:
             tags.append("table")
         return tags
@@ -142,7 +143,7 @@ class DocumentData(object):
             {"name": "section", "class": "main_cont"},
             {"name": "div", "id": "sn-content"},
             {"name": "div", "id": "content"},
-            {"name": "div", "class": "content"},
+            #{"name": "div", "class": "content"},
             {"name": "div", "class": "contentbox"},
             {"name": "section", "id": "content"},
             {"name": "div", "id": "maincontent"},
@@ -206,13 +207,19 @@ class DocumentData(object):
 
         imageCache = {}
         def processImage(imgTag, imgCounter=[0]):
+            imgUrl = None
             if "src" in imgTag.attrs:
                 imgUrl = imgTag["src"]
+                srcAttrName = 'src'
+            elif 'data-src' in imgTag.attrs:
+                imgUrl = imgTag['data-src']
+                srcAttrName = 'data-src'
+            if imgUrl:
                 if imgUrl in imageCache:
                     localName = imageCache[imgUrl]
                 else:
                     localName = "%s%s" % (str(imgCounter[0]), os.path.splitext(imgUrl.split("?")[0])[1])
-                    imageUrl = imgTag["src"]
+                    imageUrl = imgTag[srcAttrName]
                     if imageUrl.startswith("/"):
                         try:
                             parsedUrl = urlparse(self.url)
@@ -250,6 +257,10 @@ class DocumentData(object):
                 # handle images within paragraph
                 for imgTag in paragraph.find_all("img"):
                     processImage(imgTag)
+                if paragraph.name == 'figure':
+                    for imgTag in paragraph.find_all('div'):
+                        if 'data-src' in imgTag.attrs:
+                            processImage(imgTag)
 
         self.documentBody = u"\n".join(self.paragraphs)
         
