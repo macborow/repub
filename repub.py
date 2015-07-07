@@ -70,6 +70,8 @@ EXTRA_CSS = [
     #~ FONT_SCHEMES["global_TNR"]
 ]
 
+MAX_LINE_LEN = 46  # for splitting long lines in <pre> targs
+
 class DocumentData(object):
     def __init__(self, url=None):
         self.conversionTimestamp = datetime.datetime.now()
@@ -87,7 +89,7 @@ class DocumentData(object):
 
 
     def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=False, includeTables=False):
-        tags = ["p", "li", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
+        tags = ["p", "li", "pre", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
         if includeDIV:
             tags.append("div")
         if includeIMG:
@@ -241,8 +243,15 @@ class DocumentData(object):
                         newContent = None
                         if re.match("h\\d", paragraph.name):
                             newContent = u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name)
-                        if paragraph.name in ("pre", "li"):
-                            newContent = u"<%s>%s</%s>" % (paragraph.name, cgi.escape(content), paragraph.name)
+                        if paragraph.name in ("pre", "li", "blockquote"):
+                            paragraphname = paragraph.name
+                            if paragraph.name == 'blockquote' and '\n' in content.strip():
+                                paragraphname = 'pre'  # use formatting as for source code
+                            if paragraphname == 'pre':
+                                # wrap long lines (that my Sony PRS-T1 cannot wrap inside <pre> tags)
+                                import textwrap
+                                content = '\n'.join(textwrap.wrap(content, MAX_LINE_LEN))
+                            newContent = u"<%s>%s</%s>" % (paragraphname, cgi.escape(content), paragraphname)
                         elif paragraph.name == "img":
                             processImage(paragraph)
                         elif paragraph.name == "table":
