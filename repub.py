@@ -393,8 +393,10 @@ def generateContent(tmpDir, documentData):
         tf.write(content.encode("utf-8"))
 
 
-def generateCSS(tmpDir, documentData):
-    content = "\n".join(EXTRA_CSS)
+def generateCSS(tmpDir, documentData, extraCSS=None):
+    if extraCSS is None:
+        extraCSS = []
+    content = "\n".join(extraCSS)
     with open(os.path.join(tmpDir, "OEBPS", "text", "content.css"), "wb") as tf:
         tf.write(content.encode("utf-8"))
 
@@ -454,9 +456,6 @@ def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False
     """
     documentData = DocumentData(url)
 
-    if extraCSS is None:
-        extraCSS = []
-
     tmpDir = ""
     if debug:
         tmpDir = os.path.join(outDir, documentData.conversionTimestamp.strftime("%Y.%m.%d_%H.%M.%S"))
@@ -471,7 +470,7 @@ def generateEPUB(url, sourceDocument, outDir, includeDIV=False, includeIMG=False
         generateTocNcx(tmpDir, documentData)
         generateContentOpf(tmpDir, documentData)
         generateContent(tmpDir, documentData)
-        generateCSS(tmpDir, documentData)
+        generateCSS(tmpDir, documentData, extraCSS)
         downloadImages(tmpDir, documentData)
         allowedChars = ['_', '-', '!', ' ']
         sanitizedTitle = filter(lambda ch: ch.isalpha() or ch.isdigit() or ch in allowedChars, documentData.title)
