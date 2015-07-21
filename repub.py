@@ -29,8 +29,9 @@ INCLUDE_IMAGES = False  # global override (for testing)
 INCLUDE_TABLES = False
 ENABLE_STRIPPING = True  # strip only selected sections (e.g. article, etc.) - try to narrow down to only interesting content
 
+# NOTE: special font schemes for Sony PRS-T1 reader - .ttf files should be copied to READER:/fonts/
 FONT_SCHEMES = {
-    "global_TNR" : 
+    "TNR" : 
 ur"""
 @font-face {
 font-family: "Times New Roman";
@@ -63,11 +64,29 @@ src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/timesbi.ttf);
 body, div, p {
 font-family: "Times New Roman";
 }
+""",
+    "JP":  # rendering japaqnese characters using Aozora Mincho font http://www.freejapanesefont.com/aozora-mincho-download/
+ur"""
+@font-face {
+font-family: "Mincho";
+font-weight: normal;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/AozoraMinchoRegular.ttf);
+}
+@font-face {
+font-family: "Mincho";
+font-weight: bold;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/AozoraMincho-bold.ttf);
+}
+
+body, div, p {
+font-family: "Mincho";
+}
 """
 }
 
 EXTRA_CSS = [
-    #~ FONT_SCHEMES["global_TNR"]
+    #~ FONT_SCHEMES["JP"],
+    #~ FONT_SCHEMES["TNR"]
 ]
 
 MAX_LINE_LEN = 46  # for splitting long lines in <pre> targs
