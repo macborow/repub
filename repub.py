@@ -65,7 +65,7 @@ body, div, p {
 font-family: "Times New Roman";
 }
 """,
-    "JP":  # rendering japaqnese characters using Aozora Mincho font http://www.freejapanesefont.com/aozora-mincho-download/
+    "JP":  # rendering japanese characters using Aozora Mincho font http://www.freejapanesefont.com/aozora-mincho-download/
 ur"""
 @font-face {
 font-family: "Mincho";
@@ -81,12 +81,30 @@ src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/AozoraMincho-bold.ttf);
 body, div, p {
 font-family: "Mincho";
 }
+""",
+    "CHN":  # rendering chinese with http://www.babelstone.co.uk/Fonts/Han.html
+ur"""
+@font-face {
+font-family: "BabelStoneHan";
+font-weight: normal;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/BabelStoneHan.ttf);
+}
+@font-face {
+font-family: "BabelStoneHan";
+font-weight: bold;
+src: url(res:///ebook/fonts/../../mnt/sdcard/fonts/BabelStoneHan-bold.ttf);
+}
+
+body, div, p {
+font-family: "BabelStoneHan";
+}
 """
 }
 
 EXTRA_CSS = [
     #~ FONT_SCHEMES["JP"],
     #~ FONT_SCHEMES["TNR"]
+    #~ FONT_SCHEMES["CHN"]
 ]
 
 MAX_LINE_LEN = 46  # for splitting long lines in <pre> targs
