@@ -275,7 +275,8 @@ class DocumentData(object):
                 imgCounter[0] += 1
 
         # extract what looks like text/headlines
-        for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV, includeIMG, includeTables)):
+        allowedTags = self.getAllowedParagraphTagNames(includeDIV, includeIMG, includeTables)
+        for paragraph in soup.find_all(allowedTags):
             # try to skip nested DIVs
             if paragraph.name == 'div':
                 # look only at DIVs containing text directly, so they don't get picked up multiple times if the div contains another divs...
@@ -289,6 +290,11 @@ class DocumentData(object):
 
                 if not nonEmptyChildren:
                     continue
+
+            if paragraph.parent.name != 'div' and paragraph.parent.name in allowedTags:
+                # make sure not included twice, e.g. <strong> inside <p>
+                continue
+
             if paragraph.getText():
                 for content in brSplitRegexp.split(unicode(paragraph)):
                     content = bs4.BeautifulSoup(content).getText().strip()
