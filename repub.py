@@ -24,7 +24,7 @@ from xml.sax.saxutils import quoteattr
 
 URL=""
 
-INCLUDE_DIV = False  # global override (for testing)
+INCLUDE_DIV = True  # global override (for testing)
 INCLUDE_IMAGES = False  # global override (for testing)
 INCLUDE_TABLES = False
 ENABLE_STRIPPING = True  # strip only selected sections (e.g. article, etc.) - try to narrow down to only interesting content
@@ -126,7 +126,7 @@ class DocumentData(object):
 
 
     def getAllowedParagraphTagNames(self, includeDIV=False, includeIMG=False, includeTables=False):
-        tags = ["p", "li", "pre", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
+        tags = ["p", "strong", "em", "li", "pre", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"]  #, "font", "center"
         if includeDIV:
             tags.append("div")
         if includeIMG:
@@ -178,10 +178,11 @@ class DocumentData(object):
 
         # some blogs define section id="content", let's try to be smart about it
         contentSelectors = [
-            {"name": "article"},
+            #~ {"name": "article"},
             {"name": "section", "class": "main_cont"},
             {"name": "div", "id": "sn-content"},
             {"name": "div", "id": "content"},
+            {"name": "div", "data-zone": "contentSection"},
             #{"name": "div", "class": "content"},
             {"name": "div", "class": "contentbox"},
             {"name": "section", "id": "content"},
@@ -192,6 +193,8 @@ class DocumentData(object):
             {"name": "div", "class": "blogcontent"},
             {"name": "div", "class": "post"},
             {"name": "div", "class": "hentry"},
+            {"name": "div", "class": "article-single-container"},
+            {"name": "div", "id": "story-content"},
             #~ {"name": "div", "class": "col-left-story"},
         ]
         contentCandidates = []
@@ -273,6 +276,19 @@ class DocumentData(object):
 
         # extract what looks like text/headlines
         for paragraph in soup.find_all(self.getAllowedParagraphTagNames(includeDIV, includeIMG, includeTables)):
+            # try to skip nested DIVs
+            if paragraph.name == 'div':
+                # look only at DIVs containing text directly, so they don't get picked up multiple times if the div contains another divs...
+                nonEmptyChildren = []
+                for child in paragraph.children:
+                    if isinstance(child, bs4.element.NavigableString):
+                        if child.strip():
+                            nonEmptyChildren.append(child)
+                #~ if "Just to clarify, if somebody saw one of your passwords, would they be able to work out the rest of them?" in paragraph.getText():
+                    #~ import ipdb; ipdb.set_trace()
+
+                if not nonEmptyChildren:
+                    continue
             if paragraph.getText():
                 for content in brSplitRegexp.split(unicode(paragraph)):
                     content = bs4.BeautifulSoup(content).getText().strip()
