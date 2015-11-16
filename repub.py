@@ -178,7 +178,7 @@ class DocumentData(object):
 
         # some blogs define section id="content", let's try to be smart about it
         contentSelectors = [
-            #~ {"name": "article"},
+            {"name": "article", "role": "main"},
             {"name": "section", "class": "main_cont"},
             {"name": "div", "id": "sn-content"},
             {"name": "div", "id": "content"},
@@ -238,6 +238,11 @@ class DocumentData(object):
             {"name": "div", "class": "printHide"},
             {"name": "aside", "class": "related-coverage-marginalia"},
             {"name": "aside", "class": "collection-theme-latest-headlines"},
+            {"name": "div", "class": "m-site-nav"},
+            {"name": "div", "id": "top-line-navigation"},
+            {"name": "div", "id": "primary-navigation"},
+            {"name": "nav"},
+            {"name": "div", "class": "topics_holder"},
         ]
         if ENABLE_STRIPPING:
             for selector in excludedContentSelectors:
@@ -268,7 +273,11 @@ class DocumentData(object):
                             hostUrl = "%s://%s" % (parsedUrl.scheme, parsedUrl.netloc)
                         except Exception:
                             pass
-                        imageUrl = "%s%s" % (hostUrl, imageUrl)
+                        if imageUrl.startswith("//"):
+                            hostProtocol = hostUrl.split('/')[0]
+                            imageUrl = "%s%s" % (hostProtocol, imageUrl)
+                        else:
+                            imageUrl = "%s%s" % (hostUrl, imageUrl)
                     self.images.append([localName, imageUrl])
                     imageCache[imgUrl] = localName
                 self.paragraphs.append("<img src=%s/>" % quoteattr("../img/%s" % localName))
