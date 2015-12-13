@@ -300,7 +300,7 @@ class DocumentData(object):
                 if not nonEmptyChildren:
                     continue
 
-            if paragraph.parent.name != 'div' and paragraph.parent.name in allowedTags:
+            if paragraph.parent.name != 'div' and paragraph.parent.name in allowedTags and paragraph.parent.name != 'div':
                 # make sure not included twice, e.g. <strong> inside <p>
                 continue
 
@@ -501,6 +501,12 @@ def downloadWebPageSource(url):
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         urllib2.install_opener(opener)
         response = urllib2.urlopen(url)
+        #~ print response.info()
+        contentEncoding = response.info().getheader('Content-Encoding')
+        if contentEncoding == 'gzip':
+            logging.warn('Content-Encoding is gzip - inflating')
+            import zlib
+            return zlib.decompress(response.read(), 16 + zlib.MAX_WBITS)
         return response.read()
     except urllib2.HTTPError as e:
         logging.error("Failed to open source URL (%d): %s", e.code, 
