@@ -28,6 +28,8 @@ INCLUDE_DIV = True  # global override (for testing)
 INCLUDE_IMAGES = False  # global override (for testing)
 INCLUDE_TABLES = False
 ENABLE_STRIPPING = True  # strip only selected sections (e.g. article, etc.) - try to narrow down to only interesting content
+STRIP_JAVASCRIPT = True  # attempt to remove <script> tags from source document before parsing, some javascript code causes problems with BS4
+STRIP_STYLE = True # attempt to remove <style> tags before parsing, some CSS syntax causes issues with BS4
 
 # NOTE: special font schemes for Sony PRS-T1 reader - .ttf files should be copied to READER:/fonts/
 FONT_SCHEMES = {
@@ -136,12 +138,51 @@ class DocumentData(object):
             tags.append("table")
         return tags
 
+    def preprocessDocumentSource(self, sourceDocument):
+        """
+        Before parsing strip some elements that are not handled well by BeautifulSoup.
+        """
+        def stripTags(tagName, sourceDocument):
+            """
+            Attempt to strip all content between <tagName ...> and </tagName>.
+            ARGS:
+                tagName (str) - should not include < and >
+            """
+            openingTag = r"<\s*%s.*?[^/]*?>" % tagName
+            closingTag = r"<\s*?/%s\s*?>" % tagName
+            startIdx = [m.start(0) for m in re.finditer(openingTag, sourceDocument)]
+            endIdx = [m.end(0) for m in re.finditer(closingTag, sourceDocument)]
+            if len(startIdx) != len(endIdx):
+                logging.warn("Number of opening and closing <%s> tags does not match: %s/%s",
+                             tagName, numOpeningTags, numClosingTags)
+            else:
+                startIdx.reverse()
+                endIdx.reverse()
+                # additional consistency check
+                for idx in range(len(startIdx)):
+                    if endIdx[idx] < startIdx[idx]:
+                        break
+                else:
+                    # remove the matching text
+                    # TODO: this is not the most memory efficient way to do it, good enough for now
+                    for idx in range(len(startIdx)):
+                        sourceDocument = sourceDocument[:startIdx[idx]] + sourceDocument[endIdx[idx]:]
+                    logging.info("Stripped %s <%s> tags from source document", len(startIdx), tagName)
+            return sourceDocument
+
+        if STRIP_JAVASCRIPT:
+            # attempt strip all scripts from document
+            sourceDocument = stripTags("script", sourceDocument)
+        if STRIP_STYLE:
+            sourceDocument = stripTags("style", sourceDocument)
+        return sourceDocument
+
 
     def parseDocument(self, sourceDocument, includeDIV=False, includeIMG=False, includeTables=False):
         """
         sourceDocument (str) - input file contents
         """
-        soup = bs4.BeautifulSoup(sourceDocument)
+        soup = bs4.BeautifulSoup(self.preprocessDocumentSource(sourceDocument))
         
         title = soup.find("title")
         if title and title.string:
