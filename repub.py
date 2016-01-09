@@ -154,7 +154,7 @@ class DocumentData(object):
             endIdx = [m.end(0) for m in re.finditer(closingTag, sourceDocument)]
             if len(startIdx) != len(endIdx):
                 logging.warn("Number of opening and closing <%s> tags does not match: %s/%s",
-                             tagName, numOpeningTags, numClosingTags)
+                             tagName, len(startIdx), len(endIdx))
             else:
                 startIdx.reverse()
                 endIdx.reverse()
